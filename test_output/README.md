@@ -65,16 +65,41 @@ Run tests in headed mode (with browser visible):
 npm run test:headed
 ```
 
+Run specific tests:
+
+```bash
+# Run just the login test
+npm run test:login
+
+# Run just the create task test
+npm run test:task
+
+# Run tests with retries for flaky tests
+npm run test:retry
+```
+
 Run tests with UI mode for debugging:
 
 ```bash
 npm run test:ui
 ```
 
+Run tests with tracing enabled:
+
+```bash
+npm run test:trace
+```
+
 View test report:
 
 ```bash
 npm run report
+```
+
+View screenshots:
+
+```bash
+npm run screenshots
 ```
 
 ## Project Structure
@@ -93,6 +118,8 @@ npm run report
 │       ├── errorHandler.ts     # Error handling and reporting
 │       └── retryHandler.ts     # Retry mechanisms for reliability
 ├── tests/             # Test specifications
+│   ├── createTask.spec.ts      # Test for creating a task
+│   └── login.spec.ts           # Test specifically for login
 ├── .env               # Environment variables
 ├── playwright.config.ts  # Playwright configuration
 ├── package.json       # Project dependencies and scripts
@@ -139,6 +166,31 @@ Improved error capture and reporting:
 - HTML dumps of the page state
 - Detailed error logs with context
 - Step-by-step logging
+
+## Troubleshooting Login Issues
+
+If you encounter issues with the login process, try the following:
+
+1. Run the dedicated login test to isolate the problem:
+   ```bash
+   npm run test:login
+   ```
+
+2. Check the screenshots in the `test-results` directory:
+   - `login-page.png` - The initial login page
+   - `email-entered.png` - After entering the email
+   - `password-entered.png` - After entering the password
+   - `before-login-click.png` - Before clicking the login button
+   - `after-login-click.png` - After clicking the login button
+
+3. Check the logs for any errors or warnings
+
+4. If the login button isn't being clicked:
+   - The framework now implements multiple strategies to ensure the click works:
+     - Standard click via page object
+     - Direct selector click as backup
+     - Form submission as a last resort
+     - Additional Enter key press
 
 ## Adding New Tests
 
