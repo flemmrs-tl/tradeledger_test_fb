@@ -7,8 +7,14 @@
     "test": "npx playwright test",
     "test:headed": "npx playwright test --headed",
     "test:ui": "npx playwright test --ui",
+    "test:login": "npx playwright test login.spec.ts --headed",
+    "test:task": "npx playwright test createTask.spec.ts --headed",
+    "test:retry": "npx playwright test --retries=2",
+    "test:debug": "npx playwright test --debug",
+    "test:trace": "npx playwright test --trace on",
+    "clean": "rm -rf test-results/ playwright-report/",
     "report": "npx playwright show-report",
-    "debug": "npx playwright test --debug"
+    "screenshots": "open test-results || start test-results"
   },
   "keywords": [
     "playwright",
@@ -16,7 +22,7 @@
     "testing",
     "tradeledger"
   ],
-  "author": "",
+  "author": "Flemming Bengtsen",
   "license": "ISC",
   "devDependencies": {
     "@playwright/test": "^1.41.0",
