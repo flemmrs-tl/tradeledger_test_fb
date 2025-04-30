@@ -22,8 +22,8 @@ export const URLS = {
 
 // Element Selectors for Login Page
 export const LOGIN_SELECTORS = {
-  EMAIL_INPUT: 'input[type="email"]',
-  PASSWORD_INPUT: 'input[type="password"]',
+  EMAIL_INPUT: '[data-testid="user_email"]',
+  PASSWORD_INPUT: '[data-testid="user_password"]',
   LOGIN_BUTTON: 'button[type="submit"]',
   ERROR_MESSAGE: '.auth-form-error-message',
 };
@@ -31,23 +31,31 @@ export const LOGIN_SELECTORS = {
 // Element Selectors for Dashboard Page
 export const DASHBOARD_SELECTORS = {
   NEW_TASK_BUTTON: 'button:has-text("New task")',
+  NEW_TASK_BUTTON_ALT: '[data-testid="button"]:has-text("New task")',
   HELP_DIALOG: '.monday-style-dialog-content-wrapper',
   HELP_DIALOG_CLOSE: 'button[aria-label="Close"]',
-  TOOLTIP: '.tutorial-tooltip-container',
-  TOOLTIP_CLOSE: '.tooltip-close-btn',
+  TOOLTIP: '.tutorial-tooltip-container, [data-testid="tooltip"]',
+  TOOLTIP_CLOSE: '.tooltip-close-btn, [data-testid="tipseen-title"] + button:has-text("Got it")',
+  GANTT_TOOLTIP: '[role="heading"]:has-text("Click here for Gantt view")',
+  GANTT_TOOLTIP_GOT_IT: 'button:has-text("Got it")',
+  NOTIFICATION_PROMPT: '[data-testid="enable-notification-prompt"]',
+  NOTIFICATION_CLOSE: '[data-testid="enable-notification-prompt"] button:has-text("Enable Now!")',
+  BOARD_HEADING: 'h2:has-text("Test")',
 };
 
 // Element Selectors for New Task Page
 export const NEW_TASK_SELECTORS = {
-  TASK_TITLE_INPUT: 'input[placeholder="Task name"]',
+  TASK_TITLE_INPUT: '[placeholder="Task name"], input[placeholder="New item"]',
+  TASK_INLINE_EDIT: 'div[role="row"] input, div[role="row"] [role="textbox"]',
   CREATE_TASK_BUTTON: 'button:has-text("Create Task")',
   CANCEL_BUTTON: 'button:has-text("Cancel")',
+  TASK_ROW: 'div[role="row"]:has-text("QA Testing")',
 };
 
 // Common Texts
 export const TEXTS = {
-  LOGIN_PAGE_TITLE: 'Log in to your account',
-  DASHBOARD_TITLE: 'My Work',
+  LOGIN_PAGE_TITLE: 'Log In',
+  DASHBOARD_TITLE: 'Test',
   NEW_TASK_TITLE: 'Create Task',
 };
 
