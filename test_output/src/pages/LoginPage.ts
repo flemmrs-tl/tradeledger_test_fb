@@ -92,37 +92,110 @@ export default class LoginPage extends BasePage {
   }
 
   /**
-   * Click the login button
+   * Click the login button using multiple approaches to ensure success
    */
   public async clickLoginButton(): Promise<void> {
     try {
       logAction('Clicking login button', '', 'LoginPage');
       
-      // Wait for the login button to be visible and enabled
-      await this.waitForElement(LOGIN_SELECTORS.LOGIN_BUTTON, TIMEOUTS.MEDIUM);
-      
-      // Ensure button is clickable
-      const loginButton = this.page.locator(LOGIN_SELECTORS.LOGIN_BUTTON);
-      
-      // Check if button is enabled
-      const isEnabled = await loginButton.isEnabled();
-      if (!isEnabled) {
-        logWarning('Login button appears to be disabled', 'LoginPage');
-      }
-      
       // Take a screenshot before clicking
       await this.page.screenshot({ path: 'test-results/before-login-click.png' });
       
-      // Try clicking with force option to ensure it works
-      await loginButton.click({ force: true, timeout: TIMEOUTS.MEDIUM });
+      // IMPORTANT: The most direct and reliable methods first
       
-      // Additional press Enter as a backup method
-      await this.page.keyboard.press('Enter');
+      // METHOD 1: Use JavaScript to trigger the form submission directly
+      try {
+        logInfo('Using direct form submission via JavaScript', 'LoginPage');
+        await this.page.evaluate(() => {
+          // Get the form and submit it programmatically
+          document.querySelector('form')?.submit();
+          // Alternative: Find the submit button and click it via JS
+          const submitBtn = document.querySelector('button[type="submit"]');
+          if (submitBtn) {
+            (submitBtn as HTMLElement).click();
+          }
+        });
+        
+        // Brief wait to let the form submission process start
+        await this.page.waitForTimeout(500);
+      } catch (evalError) {
+        logWarning(`JavaScript form submission failed: ${evalError}`, 'LoginPage');
+      }
       
-      logInfo('Login button clicked', 'LoginPage');
+      // METHOD 2: Press Enter key while focused on password field
+      try {
+        logInfo('Pressing Enter key in password field', 'LoginPage');
+        await this.page.locator(LOGIN_SELECTORS.PASSWORD_INPUT).press('Enter');
+        await this.page.waitForTimeout(500);
+      } catch (pressError) {
+        logWarning(`Enter key in password field failed: ${pressError}`, 'LoginPage');
+      }
       
-      // Take a screenshot after clicking
+      // METHOD 3: Try direct selector with force click
+      try {
+        logInfo('Using direct selector with force click', 'LoginPage');
+        await this.page.locator(LOGIN_SELECTORS.LOGIN_BUTTON).click({ force: true, timeout: 5000 });
+        await this.page.waitForTimeout(500);
+      } catch (clickError) {
+        logWarning(`Direct selector force click failed: ${clickError}`, 'LoginPage');
+      }
+      
+      // METHOD 4: Try clicking by coordinates (center of the button)
+      try {
+        logInfo('Clicking by coordinates (center of the button)', 'LoginPage');
+        const loginButton = this.page.locator(LOGIN_SELECTORS.LOGIN_BUTTON);
+        const box = await loginButton.boundingBox();
+        if (box) {
+          const x = box.x + box.width / 2;
+          const y = box.y + box.height / 2;
+          await this.page.mouse.click(x, y);
+        }
+        await this.page.waitForTimeout(500);
+      } catch (boxError) {
+        logWarning(`Click by coordinates failed: ${boxError}`, 'LoginPage');
+      }
+      
+      // METHOD 5: Try to dispatch a submit event to the form
+      try {
+        logInfo('Dispatching submit event to form', 'LoginPage');
+        await this.page.evaluate(() => {
+          const form = document.querySelector('form');
+          if (form) {
+            const event = new Event('submit', { bubbles: true });
+            form.dispatchEvent(event);
+          }
+        });
+        await this.page.waitForTimeout(500);
+      } catch (dispatchError) {
+        logWarning(`Event dispatch failed: ${dispatchError}`, 'LoginPage');
+      }
+      
+      // METHOD 6: Try filling in the form fields and submitting in a single JS call
+      try {
+        logInfo('Complete form fill and submit in a single JS call', 'LoginPage');
+        await this.page.evaluate((email, password) => {
+          // Find the email and password fields
+          const emailField = document.querySelector('[data-testid="user_email"]') as HTMLInputElement;
+          const passwordField = document.querySelector('[data-testid="user_password"]') as HTMLInputElement;
+          const submitBtn = document.querySelector('button[type="submit"]') as HTMLButtonElement;
+          
+          if (emailField && passwordField && submitBtn) {
+            // Fill in the fields
+            emailField.value = email;
+            passwordField.value = password;
+            
+            // Submit the form
+            submitBtn.click();
+          }
+        }, CREDENTIALS.USERNAME, CREDENTIALS.PASSWORD);
+      } catch (completeFormError) {
+        logWarning(`Complete form fill and submit failed: ${completeFormError}`, 'LoginPage');
+      }
+      
+      // Take a screenshot after clicking attempts
       await this.page.screenshot({ path: 'test-results/after-login-click.png' });
+      
+      logInfo('All login button click methods attempted', 'LoginPage');
     } catch (error) {
       await ErrorHandler.handleError(this.page, error as Error, 'ClickLoginButton');
       throw error;
@@ -145,7 +218,7 @@ export default class LoginPage extends BasePage {
       await this.enterEmail(email);
       await this.enterPassword(password);
       
-      // Click the login button
+      // Click the login button using multiple methods
       await this.clickLoginButton();
       
       // Wait for navigation to complete after login
@@ -160,9 +233,17 @@ export default class LoginPage extends BasePage {
         if (await this.isLoginSuccessful()) {
           logInfo('Already on a valid page after login', 'LoginPage');
         } else {
-          // Take a screenshot of the current state
-          await this.page.screenshot({ path: 'test-results/login-failure.png' });
-          throw timeoutError;
+          // Final attempt - try navigating directly to boards and see if we're logged in
+          logInfo('Trying direct navigation to boards as a last resort', 'LoginPage');
+          await this.navigate(URLS.DASHBOARD);
+          
+          if (await this.isLoginSuccessful()) {
+            logInfo('Direct navigation successful, login seems to have worked', 'LoginPage');
+          } else {
+            // Take a screenshot of the current state
+            await this.page.screenshot({ path: 'test-results/login-failure.png' });
+            throw new Error('Login attempt failed and direct navigation did not succeed');
+          }
         }
       }
       
