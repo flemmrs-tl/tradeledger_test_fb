@@ -10,6 +10,9 @@ A Playwright TypeScript automation framework for testing Trade Ledger's Monday.c
 - **Comprehensive Logging** - Detailed logging of all test actions
 - **Error Handling** - Custom error handling with screenshots and HTML dumps
 - **Environment Variables** - Supports .env files for configuration
+- **Retry Mechanisms** - Built-in retry logic for flaky operations
+- **Popup Management** - Robust handling of dialogs, tooltips and popups
+- **Flexible Selectors** - Multiple selector strategies to handle UI variations
 
 ## Prerequisites
 
@@ -78,9 +81,17 @@ npm run report
 
 ```
 ├── src/
-│   ├── constants/     # Application constants
+│   ├── constants/     # Application constants and selectors
 │   ├── pages/         # Page object models
-│   └── utils/         # Utilities (logger, error handler)
+│   │   ├── BasePage.ts         # Base page with common methods
+│   │   ├── LoginPage.ts        # Login functionality
+│   │   ├── DashboardPage.ts    # Dashboard operations
+│   │   ├── NewTaskPage.ts      # Task creation operations
+│   │   └── index.ts            # Exports all pages
+│   └── utils/         # Utilities
+│       ├── logger.ts           # Logging functionality
+│       ├── errorHandler.ts     # Error handling and reporting
+│       └── retryHandler.ts     # Retry mechanisms for reliability
 ├── tests/             # Test specifications
 ├── .env               # Environment variables
 ├── playwright.config.ts  # Playwright configuration
@@ -88,14 +99,46 @@ npm run report
 └── tsconfig.json      # TypeScript configuration
 ```
 
-## Page Objects
+## Enhanced Features
 
-The framework includes the following page objects:
+### Improved Selectors
 
-- **BasePage**: Base page with common methods
-- **LoginPage**: Handles login functionality
-- **DashboardPage**: Dashboard page operations
-- **NewTaskPage**: Task creation operations
+The framework now includes multiple selector strategies for each element to handle UI variations:
+
+- Data-testid selectors for more stability
+- Text-based selectors as fallbacks
+- Role-based selectors for accessibility
+- CSS selectors where appropriate
+
+### Robust Popup Handling
+
+Monday.com shows various popups and tooltips that can interfere with automation:
+
+- Tooltips
+- Help dialogs
+- Notification prompts
+- Gantt view tutorials
+- Welcome messages
+
+The framework now includes specialized methods to detect and dismiss each type.
+
+### Retry Mechanisms
+
+Retry logic has been implemented at multiple levels:
+
+- `RetryHandler` utility for retrying flaky operations
+- Test-level retry with screenshots for debugging
+- Multiple selector strategies for finding elements
+- Automatic waiting and retrying for UI stabilization
+
+### Enhanced Error Reporting
+
+Improved error capture and reporting:
+
+- Screenshots on failure
+- HTML dumps of the page state
+- Detailed error logs with context
+- Step-by-step logging
 
 ## Adding New Tests
 
@@ -108,28 +151,22 @@ Example:
 ```typescript
 import { test, expect } from '@playwright/test';
 import { LoginPage, DashboardPage } from '../src/pages';
+import { RetryHandler } from '../src/utils/retryHandler';
 
 test.describe('Example Test Suite', () => {
   test('Example test case', async ({ page }) => {
     const loginPage = new LoginPage(page);
-    await loginPage.login();
+    
+    await RetryHandler.executeWithScreenshots(
+      page,
+      async () => await loginPage.login(),
+      { name: 'login process', maxAttempts: 3 }
+    );
+    
     // Add your test steps here
   });
 });
 ```
-
-## Logging
-
-The framework uses Winston for logging. Logs are saved to the `logs` directory and also output to the console.
-
-## Error Handling
-
-When errors occur, the framework:
-
-1. Takes a screenshot
-2. Captures the HTML content
-3. Logs detailed error information
-4. Stores evidence for later analysis
 
 ## Maintainers
 
