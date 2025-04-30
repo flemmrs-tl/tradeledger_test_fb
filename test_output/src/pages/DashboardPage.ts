@@ -1,7 +1,7 @@
 import { Page } from '@playwright/test';
 import BasePage from './BasePage';
 import { DASHBOARD_SELECTORS, URLS, TIMEOUTS } from '../constants';
-import { logAction, logInfo } from '../utils/logger';
+import { logAction, logInfo, logWarning } from '../utils/logger';
 import { ErrorHandler } from '../utils/errorHandler';
 
 /**
@@ -40,14 +40,42 @@ export default class DashboardPage extends BasePage {
       // Wait for any loading to complete
       await this.page.waitForLoadState('networkidle', { timeout: TIMEOUTS.MEDIUM });
       
+      // Wait for the dashboard to become visible
+      await this.waitForElement(DASHBOARD_SELECTORS.BOARD_HEADING, TIMEOUTS.MEDIUM);
+      
       // Dismiss any popups or tooltips that might be blocking the button
-      await this.dismissPopups();
+      await this.dismissAllPopups();
       
-      // Find and click the New Task button
-      await this.click(DASHBOARD_SELECTORS.NEW_TASK_BUTTON);
+      // Handle Gantt tooltip specifically as it often blocks the New Task button
+      await this.dismissGanttTooltip();
       
-      // Wait for navigation or modal to appear
-      await this.page.waitForTimeout(1000);
+      // Try the standard selector first
+      let buttonVisible = await this.isVisible(DASHBOARD_SELECTORS.NEW_TASK_BUTTON, 5000);
+      
+      if (buttonVisible) {
+        await this.click(DASHBOARD_SELECTORS.NEW_TASK_BUTTON);
+      } else {
+        // Try the alternative selector
+        logInfo('Standard New Task button not found, trying alternative selector', 'DashboardPage');
+        buttonVisible = await this.isVisible(DASHBOARD_SELECTORS.NEW_TASK_BUTTON_ALT, 5000);
+        
+        if (buttonVisible) {
+          await this.click(DASHBOARD_SELECTORS.NEW_TASK_BUTTON_ALT);
+        } else {
+          logWarning('New Task button not found with either selector', 'DashboardPage');
+          // Force the page to enter a new task mode by typing directly in the add task field
+          const addTaskSelector = '[placeholder="+ Add task"]';
+          if (await this.isVisible(addTaskSelector, 3000)) {
+            await this.click(addTaskSelector);
+            logInfo('Used add task field instead of button', 'DashboardPage');
+          } else {
+            throw new Error('Unable to find any task creation element');
+          }
+        }
+      }
+      
+      // Wait for dialog or inline editing to appear
+      await this.page.waitForTimeout(2000);
       
       logInfo('Clicked New Task button', 'DashboardPage');
     } catch (error) {
@@ -108,7 +136,16 @@ export default class DashboardPage extends BasePage {
     try {
       if (await this.isTooltipDisplayed()) {
         logAction('Dismissing tooltip', '', 'DashboardPage');
-        await this.click(DASHBOARD_SELECTORS.TOOLTIP_CLOSE);
+        
+        // Try to find the close button
+        if (await this.isVisible(DASHBOARD_SELECTORS.TOOLTIP_CLOSE, 2000)) {
+          await this.click(DASHBOARD_SELECTORS.TOOLTIP_CLOSE);
+        } else {
+          // If close button not found, try clicking outside the tooltip
+          await this.page.mouse.click(10, 10);
+          logInfo('Clicked outside to dismiss tooltip', 'DashboardPage');
+        }
+        
         await this.waitForElementToDisappear(DASHBOARD_SELECTORS.TOOLTIP);
         logInfo('Tooltip dismissed', 'DashboardPage');
       }
@@ -119,11 +156,51 @@ export default class DashboardPage extends BasePage {
   }
 
   /**
+   * Dismiss notification prompt if displayed
+   */
+  public async dismissNotificationPrompt(): Promise<void> {
+    try {
+      if (await this.isVisible(DASHBOARD_SELECTORS.NOTIFICATION_PROMPT, TIMEOUTS.SHORT)) {
+        logAction('Dismissing notification prompt', '', 'DashboardPage');
+        
+        // Try to click the close button or Enable Now button
+        if (await this.isVisible(DASHBOARD_SELECTORS.NOTIFICATION_CLOSE, 2000)) {
+          await this.click(DASHBOARD_SELECTORS.NOTIFICATION_CLOSE);
+          logInfo('Notification prompt dismissed', 'DashboardPage');
+        }
+      }
+    } catch (error) {
+      logInfo(`Failed to dismiss notification prompt: ${(error as Error).message}`, 'DashboardPage');
+    }
+  }
+
+  /**
+   * Dismiss Gantt tooltip which often blocks the New Task button
+   */
+  public async dismissGanttTooltip(): Promise<void> {
+    try {
+      if (await this.isVisible(DASHBOARD_SELECTORS.GANTT_TOOLTIP, TIMEOUTS.SHORT)) {
+        logAction('Dismissing Gantt tooltip', '', 'DashboardPage');
+        
+        if (await this.isVisible(DASHBOARD_SELECTORS.GANTT_TOOLTIP_GOT_IT, 2000)) {
+          await this.click(DASHBOARD_SELECTORS.GANTT_TOOLTIP_GOT_IT);
+          await this.waitForElementToDisappear(DASHBOARD_SELECTORS.GANTT_TOOLTIP);
+          logInfo('Gantt tooltip dismissed', 'DashboardPage');
+        }
+      }
+    } catch (error) {
+      logInfo(`Failed to dismiss Gantt tooltip: ${(error as Error).message}`, 'DashboardPage');
+    }
+  }
+
+  /**
    * Dismiss all popups and tooltips
    */
   public async dismissAllPopups(): Promise<void> {
+    await this.dismissNotificationPrompt();
     await this.dismissHelpDialog();
     await this.dismissTooltip();
+    await this.dismissGanttTooltip();
     await this.dismissPopups(); // General popup dismissal from the base class
   }
 
@@ -136,6 +213,9 @@ export default class DashboardPage extends BasePage {
       
       // Wait for page to be fully loaded
       await this.page.waitForLoadState('networkidle', { timeout: TIMEOUTS.LONG });
+      
+      // Wait for the board heading to be visible to ensure we're on the correct page
+      await this.waitForElement(DASHBOARD_SELECTORS.BOARD_HEADING, TIMEOUTS.MEDIUM);
       
       // Dismiss any popups that appear
       await this.dismissAllPopups();
