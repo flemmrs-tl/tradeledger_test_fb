@@ -9,6 +9,7 @@
     "test:ui": "npx playwright test --ui",
     "test:login": "npx playwright test login.spec.ts --headed",
     "test:task": "npx playwright test createTask.spec.ts --headed",
+    "test:nuclear": "npx playwright test nuclear-login.spec.ts --headed",
     "test:retry": "npx playwright test --retries=2",
     "test:debug": "npx playwright test --debug",
     "test:trace": "npx playwright test --trace on",
