@@ -13,6 +13,7 @@ A Playwright TypeScript automation framework for testing Trade Ledger's Monday.c
 - **Retry Mechanisms** - Built-in retry logic for flaky operations
 - **Popup Management** - Robust handling of dialogs, tooltips and popups
 - **Flexible Selectors** - Multiple selector strategies to handle UI variations
+- **"Nuclear Option"** - Guaranteed login through multiple fallback methods
 
 ## Prerequisites
 
@@ -74,6 +75,9 @@ npm run test:login
 # Run just the create task test
 npm run test:task
 
+# Run the nuclear login option for extreme cases
+npm run test:nuclear
+
 # Run tests with retries for flaky tests
 npm run test:retry
 ```
@@ -114,12 +118,14 @@ npm run screenshots
 │   │   ├── NewTaskPage.ts      # Task creation operations
 │   │   └── index.ts            # Exports all pages
 │   └── utils/         # Utilities
-│       ├── logger.ts           # Logging functionality
-│       ├── errorHandler.ts     # Error handling and reporting
-│       └── retryHandler.ts     # Retry mechanisms for reliability
+│       ├── authenticationHelper.ts  # Special authentication methods
+│       ├── logger.ts               # Logging functionality
+│       ├── errorHandler.ts         # Error handling and reporting
+│       └── retryHandler.ts         # Retry mechanisms for reliability
 ├── tests/             # Test specifications
 │   ├── createTask.spec.ts      # Test for creating a task
-│   └── login.spec.ts           # Test specifically for login
+│   ├── login.spec.ts           # Test specifically for login
+│   └── nuclear-login.spec.ts   # Emergency login methods
 ├── .env               # Environment variables
 ├── playwright.config.ts  # Playwright configuration
 ├── package.json       # Project dependencies and scripts
@@ -169,7 +175,9 @@ Improved error capture and reporting:
 
 ## Troubleshooting Login Issues
 
-If you encounter issues with the login process, try the following:
+If you encounter issues with the login process, try the following approaches in order:
+
+### Level 1: Standard Login Test
 
 1. Run the dedicated login test to isolate the problem:
    ```bash
@@ -183,14 +191,35 @@ If you encounter issues with the login process, try the following:
    - `before-login-click.png` - Before clicking the login button
    - `after-login-click.png` - After clicking the login button
 
-3. Check the logs for any errors or warnings
+### Level 2: Enhanced Login Methods
 
-4. If the login button isn't being clicked:
-   - The framework now implements multiple strategies to ensure the click works:
-     - Standard click via page object
-     - Direct selector click as backup
-     - Form submission as a last resort
-     - Additional Enter key press
+The `LoginPage.ts` now implements multiple strategies to ensure the login button click works:
+
+- Standard click via page object
+- Direct selector click with force option
+- Form submission via JavaScript
+- Enter key press on password field
+- Click by coordinates on the button
+- Event dispatching via JavaScript
+
+### Level 3: The "Nuclear Option"
+
+If all else fails, use the nuclear login option which tries ALL possible authentication methods:
+
+```bash
+npm run test:nuclear
+```
+
+The nuclear option:
+1. Tries standard login first
+2. Falls back to direct JavaScript form manipulation
+3. Uses the AuthenticationHelper to try multiple authentication strategies:
+   - Direct form submission
+   - Direct navigation bypass
+   - Cookie-based authentication attempts
+   - localStorage authentication
+   - sessionStorage authentication
+4. Provides extensive logging and screenshots for each attempt
 
 ## Adding New Tests
 
@@ -204,18 +233,15 @@ Example:
 import { test, expect } from '@playwright/test';
 import { LoginPage, DashboardPage } from '../src/pages';
 import { RetryHandler } from '../src/utils/retryHandler';
+import { AuthenticationHelper } from '../src/utils/authenticationHelper';
 
 test.describe('Example Test Suite', () => {
   test('Example test case', async ({ page }) => {
-    const loginPage = new LoginPage(page);
+    // Use the nuclear option for login when needed
+    const authSuccess = await AuthenticationHelper.tryAllAuthMethods(page);
+    expect(authSuccess).toBeTruthy();
     
-    await RetryHandler.executeWithScreenshots(
-      page,
-      async () => await loginPage.login(),
-      { name: 'login process', maxAttempts: 3 }
-    );
-    
-    // Add your test steps here
+    // Continue with the test...
   });
 });
 ```
